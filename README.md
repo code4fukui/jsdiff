@@ -1,11 +1,24 @@
 # jsdiff-es
 
-A JavaScript text differencing ES module implementation.
+> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
 
-Based on the algorithm proposed in
-["An O(ND) Difference Algorithm and its Variations" (Myers, 1986)](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.4.6927).
+A JavaScript text differencing library. Based on the algorithm proposed in ["An O(ND) Difference Algorithm and its Variations" (Myers, 1986)](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.4.6927).
+
+This is an ES module-focused implementation.
+
+## Features
+
+*   **Text Diffs:** Compares text by character, word, line, or sentence.
+*   **Specialized Diffs:** Includes dedicated methods for comparing CSS, JSON objects, and arrays.
+*   **Patching:** Create and apply patches in the unified diff format.
+*   **Flexible Options:** Supports case-insensitivity, custom comparators, and whitespace handling.
+*   **Environment Support:** Works in Node.js, Deno, and modern browsers.
 
 ## Usage
+
+### Browser / Deno
+
+You can import `jsdiff-es` directly from a CDN or a hosting service like GitHub Pages.
 
 ```js
 import { diffChars } from "https://taisukef.github.io/jsdiff-es/src/diff/character.js";
@@ -14,140 +27,33 @@ const one = 'beep boop';
 const other = 'beep boob blah';
 
 const diff = diffChars(one, other);
+
 console.log(diff);
+// [
+//   { value: 'beep boo', count: 8 },
+//   { value: 'p', count: 1, removed: true },
+//   { value: 'b blah', count: 6, added: true }
+// ]
 ```
 
-## API (TBD)
+### Node.js
 
-* `Diff.diffChars(oldStr, newStr[, options])` - diffs two blocks of text, comparing character by character.
+First, install the package:
 
-    Returns a list of change objects (See below).
+```bash
+npm install diff
+```
 
-    Options
-    * `ignoreCase`: `true` to ignore casing difference. Defaults to `false`.
-
-* `Diff.diffWords(oldStr, newStr[, options])` - diffs two blocks of text, comparing word by word, ignoring whitespace.
-
-    Returns a list of change objects (See below).
-
-    Options
-    * `ignoreCase`: Same as in `diffChars`.
-
-* `Diff.diffWordsWithSpace(oldStr, newStr[, options])` - diffs two blocks of text, comparing word by word, treating whitespace as significant.
-
-    Returns a list of change objects (See below).
-
-* `Diff.diffLines(oldStr, newStr[, options])` - diffs two blocks of text, comparing line by line.
-
-    Options
-    * `ignoreWhitespace`: `true` to ignore leading and trailing whitespace. This is the same as `diffTrimmedLines`
-    * `newlineIsToken`: `true` to treat newline characters as separate tokens.  This allows for changes to the newline structure to occur independently of the line content and to be treated as such. In general this is the more human friendly form of `diffLines` and `diffLines` is better suited for patches and other computer friendly output.
-
-    Returns a list of change objects (See below).
-
-* `Diff.diffTrimmedLines(oldStr, newStr[, options])` - diffs two blocks of text, comparing line by line, ignoring leading and trailing whitespace.
-
-    Returns a list of change objects (See below).
-
-* `Diff.diffSentences(oldStr, newStr[, options])` - diffs two blocks of text, comparing sentence by sentence.
-
-    Returns a list of change objects (See below).
-
-* `Diff.diffCss(oldStr, newStr[, options])` - diffs two blocks of text, comparing CSS tokens.
-
-    Returns a list of change objects (See below).
-
-* `Diff.diffJson(oldObj, newObj[, options])` - diffs two JSON objects, comparing the fields defined on each. The order of fields, etc does not matter in this comparison.
-
-    Returns a list of change objects (See below).
-
-* `Diff.diffArrays(oldArr, newArr[, options])` - diffs two arrays, comparing each item for strict equality (===).
-
-    Options
-    * `comparator`: `function(left, right)` for custom equality checks
-
-    Returns a list of change objects (See below).
-
-* `Diff.createTwoFilesPatch(oldFileName, newFileName, oldStr, newStr, oldHeader, newHeader)` - creates a unified diff patch.
-
-    Parameters:
-    * `oldFileName` : String to be output in the filename section of the patch for the removals
-    * `newFileName` : String to be output in the filename section of the patch for the additions
-    * `oldStr` : Original string value
-    * `newStr` : New string value
-    * `oldHeader` : Additional information to include in the old file header
-    * `newHeader` : Additional information to include in the new file header
-    * `options` : An object with options. Currently, only `context` is supported and describes how many lines of context should be included.
-
-* `Diff.createPatch(fileName, oldStr, newStr, oldHeader, newHeader)` - creates a unified diff patch.
-
-    Just like Diff.createTwoFilesPatch, but with oldFileName being equal to newFileName.
-
-
-* `Diff.structuredPatch(oldFileName, newFileName, oldStr, newStr, oldHeader, newHeader, options)` - returns an object with an array of hunk objects.
-
-    This method is similar to createTwoFilesPatch, but returns a data structure
-    suitable for further processing. Parameters are the same as createTwoFilesPatch. The data structure returned may look like this:
-
-    ```js
-    {
-      oldFileName: 'oldfile', newFileName: 'newfile',
-      oldHeader: 'header1', newHeader: 'header2',
-      hunks: [{
-        oldStart: 1, oldLines: 3, newStart: 1, newLines: 3,
-        lines: [' line2', ' line3', '-line4', '+line5', '\\ No newline at end of file'],
-      }]
-    }
-    ```
-
-* `Diff.applyPatch(source, patch[, options])` - applies a unified diff patch.
-
-    Return a string containing new version of provided data. `patch` may be a string diff or the output from the `parsePatch` or `structuredPatch` methods.
-
-    The optional `options` object may have the following keys:
-
-    - `fuzzFactor`: Number of lines that are allowed to differ before rejecting a patch. Defaults to 0.
-    - `compareLine(lineNumber, line, operation, patchContent)`: Callback used to compare to given lines to determine if they should be considered equal when patching. Defaults to strict equality but may be overridden to provide fuzzier comparison. Should return false if the lines should be rejected.
-
-* `Diff.applyPatches(patch, options)` - applies one or more patches.
-
-    This method will iterate over the contents of the patch and apply to data provided through callbacks. The general flow for each patch index is:
-
-    - `options.loadFile(index, callback)` is called. The caller should then load the contents of the file and then pass that to the `callback(err, data)` callback. Passing an `err` will terminate further patch execution.
-    - `options.patched(index, content, callback)` is called once the patch has been applied. `content` will be the return value from `applyPatch`. When it's ready, the caller should call `callback(err)` callback. Passing an `err` will terminate further patch execution.
-
-    Once all patches have been applied or an error occurs, the `options.complete(err)` callback is made.
-
-* `Diff.parsePatch(diffStr)` - Parses a patch into structured data
-
-    Return a JSON object representation of the a patch, suitable for use with the `applyPatch` method. This parses to the same structure returned by `Diff.structuredPatch`.
-
-* `convertChangesToXML(changes)` - converts a list of changes to a serialized XML format
-
-
-All methods above which accept the optional `callback` method will run in sync mode when that parameter is omitted and in async mode when supplied. This allows for larger diffs without blocking the event loop. This may be passed either directly as the final parameter or as the `callback` field in the `options` object.
-
-### Change Objects
-Many of the methods above return change objects. These objects consist of the following fields:
-
-* `value`: Text content
-* `added`: True if the value was inserted into the new string
-* `removed`: True if the value was removed from the old string
-
-Note that some cases may omit a particular flag field. Comparison on the flag fields should always be done in a truthy or falsy manner.
-
-## Examples
-
-Basic example in Node
+Then, import and use the desired methods:
 
 ```js
-require('colors');
-const Diff = require('diff');
+import { diffChars } from 'diff';
+// or for CommonJS: const Diff = require('diff');
 
 const one = 'beep boop';
 const other = 'beep boob blah';
 
-const diff = Diff.diffChars(one, other);
+const diff = diffChars(one, other);
 
 diff.forEach((part) => {
   // green for additions, red for deletions
@@ -159,54 +65,54 @@ diff.forEach((part) => {
 
 console.log();
 ```
-Running the above program should yield
 
-<img src="images/node_example.png" alt="Node Example">
+This will produce a color-coded output in the terminal.
 
-Basic example in a web page
+## API Reference
 
-```html
-<pre id="display"></pre>
-<script src="diff.js"></script>
-<script>
-const one = 'beep boop',
-    other = 'beep boob blah',
-    color = '';
-    
-let span = null;
+All diff methods return an array of change objects.
 
-const diff = Diff.diffChars(one, other),
-    display = document.getElementById('display'),
-    fragment = document.createDocumentFragment();
+#### Change Objects
 
-diff.forEach((part) => {
-  // green for additions, red for deletions
-  // grey for common parts
-  const color = part.added ? 'green' :
-    part.removed ? 'red' : 'grey';
-  span = document.createElement('span');
-  span.style.color = color;
-  span.appendChild(document
-    .createTextNode(part.value));
-  fragment.appendChild(span);
-});
+Change objects are the core return value and have the following structure:
 
-display.appendChild(fragment);
-</script>
-```
+*   `value` (string): The content of the change.
+*   `added` (boolean | undefined): `true` if the value was inserted into the new string.
+*   `removed` (boolean | undefined): `true` if the value was removed from the old string.
+*   `count` (number | undefined): The number of tokens in the `value`.
 
-Open the above .html file in a browser and you should see
+If a change object has neither `added` nor `removed` set, it is a common part of both strings.
 
-<img src="images/web_example.png" alt="Node Example">
+### Text Differencing
 
-**[Full online demo](http://kpdecker.github.com/jsdiff)**
+*   `diffChars(oldStr, newStr[, options])`: Diffs two blocks of text, comparing character by character.
+*   `diffWords(oldStr, newStr[, options])`: Diffs two blocks of text, comparing word by word, ignoring whitespace.
+*   `diffWordsWithSpace(oldStr, newStr[, options])`: Diffs two blocks of text, comparing word by word, treating whitespace as significant.
+*   `diffLines(oldStr, newStr[, options])`: Diffs two blocks of text, comparing line by line.
+*   `diffTrimmedLines(oldStr, newStr[, options])`: Diffs two blocks of text, comparing line by line, ignoring leading and trailing whitespace.
+*   `diffSentences(oldStr, newStr[, options])`: Diffs two blocks of text, comparing sentence by sentence.
 
-## Compatibility
+### Specialized Differencing
 
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/jsdiff.svg)](https://saucelabs.com/u/jsdiff)
+*   `diffCss(oldStr, newStr[, options])`: Diffs two blocks of text, comparing CSS tokens.
+*   `diffJson(oldObj, newObj[, options])`: Diffs two JSON objects. The input will be canonicalized and pretty-printed, and then a line-based diff is performed.
+*   `diffArrays(oldArr, newArr[, options])`: Diffs two arrays, comparing each item for strict equality (`===`). An optional `comparator` function can be passed in the `options` object.
 
-jsdiff supports all ES3 environments with some known issues on IE8 and below. Under these browsers some diff algorithms such as word diff and others may fail due to lack of support for capturing groups in the `split` operation.
+### Patching
+
+*   `createPatch(fileName, oldStr, newStr, oldHeader, newHeader[, options])`: Creates a unified diff patch.
+*   `createTwoFilesPatch(oldFileName, newFileName, oldStr, newStr, oldHeader, newHeader[, options])`: Creates a unified diff patch for two separate files.
+*   `structuredPatch(oldFileName, newFileName, oldStr, newStr, oldHeader, newHeader, options)`: Returns an object with an array of hunk objects.
+*   `applyPatch(source, patch[, options])`: Applies a unified diff patch.
+*   `applyPatches(patch, options)`: Applies one or more patches.
+*   `parsePatch(diffStr)`: Parses a patch into a structured data object.
+*   `merge(mine, theirs, base)`: Merges two patches into a single result.
+
+### Converters
+
+*   `convertChangesToXML(changes)`: Converts a list of change objects to a serialized XML format.
+*   `convertChangesToDMP(changes)`: Converts a list of change objects to the Diff-Match-Patch format.
 
 ## License
 
-See [LICENSE](https://github.com/kpdecker/jsdiff/blob/master/LICENSE).
+MIT License — see [LICENSE](LICENSE).
